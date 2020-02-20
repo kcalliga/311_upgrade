@@ -1,14 +1,12 @@
 # inner.yml:
-- debug:
-    msg: "outer item={{ ocp_server }}"
 
-- name: Drain "{{ ocp_server }}"
-  shell: oc adm drain "{{ ocp_server }}" --delete-local-data=true --ignore-daemonsets=true
+- name: Drain "{{ item }}"
+  shell: oc adm drain "{{ item }}" --delete-local-data=true --ignore-daemonsets=true
   environment:
     KUBECONFIG: /home/keith/kubeconfig
 
-- name: Check Status of Drain
-  shell: oc get nodes|grep {{ ocp_server }}
+- name: Check Status of Drain for "{{ item }}"
+  shell: oc get nodes|grep "{{ item }}"
   register: drainstatus
   until: drainstatus.stdout.find("SchedulingDisabled") != -1
   retries: 5
@@ -18,9 +16,34 @@
 
 - name: Exclude Updates of Docker
   shell: atomic-openshift-docker-excluder exclude
-  delegate_to: "{{ ocp_server }}"
+  delegate_to: "{{ item }}"
 
 - name: Exclude Updates of Openshift
   shell: atomic-openshift-docker-excluder exclude
-  delegate_to: "{{ ocp_server }}"
+  delegate_to: "{{ item }}"
 
+- name: upgrade all packages, excluding openshift
+  yum:
+    name: '*'
+    state: latest
+    exclude: atomic-openshift-*
+  delegate_to: "{{ item }}"
+
+- name: Reboot {{ item }}
+  reboot:
+    reboot_timeout: 300
+  delegate_to: "{{ item }}"
+
+- name: Check That Node is ready for {{ item }}
+  shell: oc get nodes|grep {{ item }}
+  register: readystatus
+  until: readystatus.stdout.find(" Ready") != -1
+  retries: 5
+  delay: 10
+  environment:
+    KUBECONFIG: /home/keith/kubeconfig
+
+- name: Uncordon {{ item }}
+  shell: oc adm uncordon {{ item }}
+  environment:
+    KUBECONFIG: /home/keith/kubeconfig

@@ -1,9 +1,4 @@
----
-# tasks file for patch_os
-
 - include_tasks: inner.yml
-  loop:
-    - "{{ groups['test'][0] }}"
-  loop_control:
-    loop_var: ocp_server
+  with_items:
+    - "{{ groups['nodes'] }}"
 
