@@ -1,0 +1,26 @@
+# inner.yml:
+- debug:
+    msg: "outer item={{ ocp_server }}"
+
+- name: Drain "{{ ocp_server }}"
+  shell: oc adm drain "{{ ocp_server }}" --delete-local-data=true --ignore-daemonsets=true
+  environment:
+    KUBECONFIG: /home/keith/kubeconfig
+
+- name: Check Status of Drain
+  shell: oc get nodes|grep {{ ocp_server }}
+  register: drainstatus
+  until: drainstatus.stdout.find("SchedulingDisabled") != -1
+  retries: 5
+  delay: 10
+  environment:
+    KUBECONFIG: /home/keith/kubeconfig
+
+- name: Exclude Updates of Docker
+  shell: atomic-openshift-docker-excluder exclude
+  delegate_to: "{{ ocp_server }}"
+
+- name: Exclude Updates of Openshift
+  shell: atomic-openshift-docker-excluder exclude
+  delegate_to: "{{ ocp_server }}"
+

@@ -1,0 +1,10 @@
+- name: "Patch OS on All OCP Machines"
+  hosts: localhost
+  become: True
+  become_method: sudo
+  become_user: root
+#  vars_files:
+#    - ./roles/default_vars/vars/secrets.yml
+#    - ./roles/default_vars/vars/main.yml
+  roles:
+    - role: patch_os
